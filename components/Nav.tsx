@@ -29,6 +29,7 @@ export default function Nav() {
 
   const rightTabs = [
     { href: "/habits", label: "Habits", due: false },
+    { href: "/runs", label: "Runs", due: false },
     { href: "/weight", label: "Weight", due: weighInDue },
     { href: "/stats", label: "Stats", due: false },
     { href: "/categories", label: "Edit", due: false },

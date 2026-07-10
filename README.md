@@ -23,12 +23,13 @@ public URL.
 ## Structure
 
 - `app/` — routes: `/` (all tasks), `/c/[slug]` (per-category), `/habits`,
-  `/weight`, `/stats`, `/categories` (category manager + backup)
-- `components/` — `Nav`, `TodoView`, `HabitsView`, `WeightView`, `StatsView`,
-  `WeightStats`, `CategoriesView`, `StatPrimitives`
+  `/runs`, `/weight`, `/stats`, `/categories` (category manager + backup)
+- `components/` — `Nav`, `LockGate`, `TodoView`, `HabitsView`, `RunsView`,
+  `WeightView`, `StatsView`, `RunStats`, `WeightStats`, `CategoriesView`,
+  `StatPrimitives`
 - `lib/` — types, default categories + validated accent palette,
-  `useLocalStorage` hook, store context, stats / deadline / weight helpers,
-  shared chart tokens
+  `useLocalStorage` hook, store context, auth, stats / deadline / weight /
+  running helpers, shared chart tokens
 
 ## Features
 
@@ -43,16 +44,23 @@ public URL.
   stored in kilograms and converted for display, so switching units never
   reinterprets past entries. The Weight tab is for logging (check-in, goal, an
   editable 14-day log); the trend lives on Stats.
+- **Runs** — log a distance and a time; pace is derived. Runs are a list, not a
+  per-day entry: rest days have none and a double day has two, whose totals
+  combine. Distance is stored in metres and duration in seconds, so the km/mi
+  toggle never reinterprets past runs. Time accepts `mm:ss`, `h:mm:ss`, or plain
+  minutes.
 - **Categories** — fully editable (add / rename / recolor / delete), seeded with
   Fitness, Career, Study, Personal, Misc. Deleting one moves its items to the
   first remaining category.
 - **Stats** — 7-day task summary and streak; deadlines (overdue, due today,
   scheduled, plus the overdue list); tasks per day stacked by category; habits
-  completed per day; per-habit consistency; and weight, shown as daily readings
-  under a 7-day moving average. Weight deltas come off that average rather than
-  off raw readings, since day-to-day weight swings on water alone.
+  completed per day; per-habit consistency; running volume and pace; and weight,
+  shown as daily readings under a 7-day moving average. Weight deltas come off
+  that average rather than off raw readings, since day-to-day weight swings on
+  water alone. On the pace chart a rest day is a gap, never a zero, and the axis
+  is reversed so faster reads as higher.
 - **Backup** — export/import all data as JSON from the Edit page. Backups are
-  versioned (currently 5); older ones import and are normalized forward.
+  versioned (currently 6); older ones import and are normalized forward.
 - **Lock screen** — a passphrase gate on every fresh page load, with an optional
   30-day "remember this device". Moving between tabs never re-prompts; the lock
   icon beside the wordmark re-locks and forgets the device. Only a salted
@@ -61,5 +69,6 @@ public URL.
   them, and the remembered flag is equally forgeable. It stops a passer-by.
 
 Data is stored under the `pt:todos`, `pt:habits`, `pt:habitEntries`,
-`pt:categories`, `pt:weightEntries`, and `pt:weightSettings` localStorage keys.
-Clearing site data wipes everything — export a backup first.
+`pt:categories`, `pt:weightEntries`, `pt:weightSettings`, `pt:runs`, and
+`pt:runSettings` localStorage keys. Clearing site data wipes everything —
+export a backup first.

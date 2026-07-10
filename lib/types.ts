@@ -41,3 +41,23 @@ export interface WeightSettings {
   unit: WeightUnit; // display only
   goal: number | null; // kilograms
 }
+
+export type RunUnit = "km" | "mi";
+
+/**
+ * One logged run. Distance is always metres and duration always seconds,
+ * whatever the display unit — so switching km/mi never reinterprets old runs.
+ * Runs are a list, not a per-day entry: rest days simply have none, and a
+ * double day has two.
+ */
+export interface Run {
+  id: string;
+  day: string; // YYYY-MM-DD local day the run happened
+  meters: number;
+  seconds: number;
+  createdAt: string; // ISO timestamp
+}
+
+export interface RunSettings {
+  unit: RunUnit; // display only
+}

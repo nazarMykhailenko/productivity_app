@@ -18,6 +18,7 @@ import { useStore } from "@/lib/store";
 import { tint } from "@/lib/categories";
 import { GRID, INK2, MUTED, SERIES_1, SURFACE, axisTick } from "@/lib/chart";
 import { ChartEmpty, StatTile } from "@/components/StatPrimitives";
+import RunStats from "@/components/RunStats";
 import WeightStats from "@/components/WeightStats";
 import {
   daysLate,
@@ -277,6 +278,7 @@ export default function StatsView() {
         )}
       </section>
 
+      <RunStats />
       <WeightStats />
     </div>
   );

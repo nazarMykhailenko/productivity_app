@@ -10,11 +10,20 @@ import {
   sanitizeWeightEntries,
   sanitizeWeightSettings,
 } from "./weight";
+import {
+  DEFAULT_RUN_SETTINGS,
+  isValidRun,
+  sanitizeRunSettings,
+  sanitizeRuns,
+} from "./running";
 import type {
   Category,
   Habit,
   HabitEntries,
   HabitKind,
+  Run,
+  RunSettings,
+  RunUnit,
   Todo,
   WeightEntries,
   WeightSettings,
@@ -31,6 +40,8 @@ interface Store {
   habitEntries: HabitEntries;
   weightEntries: WeightEntries;
   weightSettings: WeightSettings;
+  runs: Run[];
+  runSettings: RunSettings;
   categories: Category[];
   /** Lookup by id; use getCategory() for a safe fallback. */
   categoryMap: Record<string, Category>;
@@ -68,6 +79,13 @@ interface Store {
   /** Target weight in kilograms; null clears it. */
   setWeightGoal: (kg: number | null) => void;
 
+  /** Log a run: metres and seconds, on a YYYY-MM-DD day. */
+  addRun: (run: { day: string; meters: number; seconds: number }) => void;
+  editRun: (id: string, patch: Partial<Pick<Run, "day" | "meters" | "seconds">>) => void;
+  deleteRun: (id: string) => void;
+  /** Display unit only — runs stay in metres. */
+  setRunUnit: (unit: RunUnit) => void;
+
   addCategory: (label: string, color: string) => void;
   editCategory: (id: string, patch: Partial<Pick<Category, "label" | "color">>) => void;
   /** Removes the category; its todos and habits move to the first remaining one. */
@@ -90,6 +108,9 @@ interface Backup {
   // Added in version 4; absent from v1–v3 backups.
   weightEntries?: WeightEntries;
   weightSettings?: WeightSettings;
+  // Added in version 6; absent from v1–v5 backups.
+  runs?: Run[];
+  runSettings?: RunSettings;
   // Present in v1/v2 backups (goals feature, since removed); ignored on import.
   goals?: unknown;
 }
@@ -116,7 +137,10 @@ function isValidBackup(v: unknown): v is Backup {
         b.weightEntries !== null &&
         !Array.isArray(b.weightEntries))) &&
     (b.weightSettings === undefined ||
-      (typeof b.weightSettings === "object" && b.weightSettings !== null))
+      (typeof b.weightSettings === "object" && b.weightSettings !== null)) &&
+    (b.runs === undefined || Array.isArray(b.runs)) &&
+    (b.runSettings === undefined ||
+      (typeof b.runSettings === "object" && b.runSettings !== null))
   );
 }
 
@@ -139,6 +163,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
   const [weightSettings, setWeightSettings, weightSettingsReady] =
     useLocalStorage<WeightSettings>("pt:weightSettings", DEFAULT_WEIGHT_SETTINGS);
+  const [runs, setRuns, runsReady] = useLocalStorage<Run[]>("pt:runs", []);
+  const [runSettings, setRunSettings, runSettingsReady] = useLocalStorage<RunSettings>(
+    "pt:runSettings",
+    DEFAULT_RUN_SETTINGS
+  );
 
   // Tasks saved before deadlines existed carry no `due` key at all; normalize on
   // read so nothing downstream has to cope with undefined.
@@ -152,6 +181,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       habitEntries,
       weightEntries,
       weightSettings,
+      runs,
+      runSettings,
       categories,
       categoryMap,
       getCategory: (id) => categoryMap[id] ?? FALLBACK_CATEGORY,
@@ -161,7 +192,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         entriesReady &&
         categoriesReady &&
         weightReady &&
-        weightSettingsReady,
+        weightSettingsReady &&
+        runsReady &&
+        runSettingsReady,
 
       addTodo(title, category, due = null) {
         const t = title.trim();
@@ -284,6 +317,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }));
       },
 
+      addRun({ day, meters, seconds }) {
+        if (!isValidDay(day) || !isValidRun(meters, seconds)) return;
+        setRuns((prev) => [
+          ...prev,
+          { id: uid(), day, meters, seconds, createdAt: new Date().toISOString() },
+        ]);
+      },
+
+      editRun(id, patch) {
+        setRuns((prev) =>
+          prev.map((r) => {
+            if (r.id !== id) return r;
+            const next = { ...r, ...patch };
+            // Reject an edit that would make the run nonsensical, rather than
+            // storing something the charts would then have to defend against.
+            if (!isValidDay(next.day) || !isValidRun(next.meters, next.seconds)) return r;
+            return next;
+          })
+        );
+      },
+
+      deleteRun(id) {
+        setRuns((prev) => prev.filter((r) => r.id !== id));
+      },
+
+      setRunUnit(unit) {
+        setRunSettings((prev) => ({ ...prev, unit }));
+      },
+
       addCategory(label, color) {
         const l = label.trim();
         if (!l) return;
@@ -320,7 +382,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       exportData() {
         return JSON.stringify(
           {
-            version: 5,
+            version: 6,
             exportedAt: new Date().toISOString(),
             todos,
             categories,
@@ -328,6 +390,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             habitEntries,
             weightEntries,
             weightSettings,
+            runs,
+            runSettings,
           },
           null,
           2
@@ -349,6 +413,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setHabitEntries(parsed.habitEntries ?? {});
         setWeightEntries(sanitizeWeightEntries(parsed.weightEntries));
         setWeightSettings(sanitizeWeightSettings(parsed.weightSettings));
+        setRuns(sanitizeRuns(parsed.runs));
+        setRunSettings(sanitizeRunSettings(parsed.runSettings));
         return true;
       },
     };
@@ -358,6 +424,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     habitEntries,
     weightEntries,
     weightSettings,
+    runs,
+    runSettings,
     categories,
     todosReady,
     habitsReady,
@@ -365,11 +433,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     categoriesReady,
     weightReady,
     weightSettingsReady,
+    runsReady,
+    runSettingsReady,
     setTodos,
     setHabits,
     setHabitEntries,
     setWeightEntries,
     setWeightSettings,
+    setRuns,
+    setRunSettings,
     setCategories,
   ]);
 
