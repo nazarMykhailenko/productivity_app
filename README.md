@@ -1,0 +1,59 @@
+# Momentum
+
+A single-user personal productivity tracker: category-based to-dos with
+deadlines, a weekly habit tracker, a daily weight check-in, and a stats page
+that charts progress over time. Next.js (App Router, TypeScript), Tailwind CSS,
+Recharts. All data lives in `localStorage` — no backend, no auth, no
+environment variables.
+
+## Run locally
+
+```bash
+npm install
+npm run dev
+```
+
+## Deploy
+
+Push to a Git repo and import into [Vercel](https://vercel.com/new). Vercel
+detects Next.js automatically: no build settings, no environment variables, no
+database. The app is marked `noindex`, since it serves one person's data over a
+public URL.
+
+## Structure
+
+- `app/` — routes: `/` (all tasks), `/c/[slug]` (per-category), `/habits`,
+  `/weight`, `/stats`, `/categories` (category manager + backup)
+- `components/` — `Nav`, `TodoView`, `HabitsView`, `WeightView`, `StatsView`,
+  `WeightStats`, `CategoriesView`, `StatPrimitives`
+- `lib/` — types, default categories + validated accent palette,
+  `useLocalStorage` hook, store context, stats / deadline / weight helpers,
+  shared chart tokens
+
+## Features
+
+- **To-dos** — add, tick, edit, delete; filter by category tab. Each task takes
+  an optional deadline. Open tasks sort by deadline (overdue first, undated
+  last), and a completed task is never "overdue", however late it landed.
+  Completions are timestamped and feed the stats.
+- **Habits** — recurring activities in a Mon–Sun weekly grid. "Tick" habits get
+  a per-day checkbox; "number" habits take a daily threshold and count as done
+  when the logged value reaches it.
+- **Weight** — one morning check-in per day, in kg or lb. Weights are always
+  stored in kilograms and converted for display, so switching units never
+  reinterprets past entries. The Weight tab is for logging (check-in, goal, an
+  editable 14-day log); the trend lives on Stats.
+- **Categories** — fully editable (add / rename / recolor / delete), seeded with
+  Fitness, Career, Study, Personal, Misc. Deleting one moves its items to the
+  first remaining category.
+- **Stats** — 7-day task summary and streak; deadlines (overdue, due today,
+  scheduled, plus the overdue list); tasks per day stacked by category; habits
+  completed per day; per-habit consistency; and weight, shown as daily readings
+  under a 7-day moving average. Weight deltas come off that average rather than
+  off raw readings, since day-to-day weight swings on water alone.
+- **Backup** — export/import all data as JSON from the Edit page. Backups are
+  versioned (currently 5); older ones import and are normalized forward.
+
+Data is stored under the `pt:todos`, `pt:habits`, `pt:habitEntries`,
+`pt:categories`, `pt:weightEntries`, and `pt:weightSettings` localStorage keys.
+Clearing site data wipes everything — export a backup first.

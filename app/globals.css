@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@theme {
+  /* Surfaces */
+  --color-base: #0d0d0f; /* page plane */
+  --color-surface: #131316; /* cards, chart surface */
+  --color-raised: #1a1a1f; /* inputs, hover fills */
+
+  /* Ink */
+  --color-ink: #f4f4f5;
+  --color-ink-2: #a6a6ad;
+  --color-ink-3: #6e6e76;
+
+  /* Lines */
+  --color-edge: #26262c; /* hairline borders */
+  --color-grid: #222228; /* chart gridlines */
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+html {
+  color-scheme: dark;
+  /* Slightly larger interface: scales all rem-based type and spacing (~9%). */
+  font-size: 17.5px;
+}
+
+body {
+  background: var(--color-base);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(57, 135, 229, 0.35);
+}
