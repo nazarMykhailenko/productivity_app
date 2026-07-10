@@ -53,6 +53,12 @@ public URL.
   off raw readings, since day-to-day weight swings on water alone.
 - **Backup** — export/import all data as JSON from the Edit page. Backups are
   versioned (currently 5); older ones import and are normalized forward.
+- **Lock screen** — a passphrase gate on every fresh page load, with an optional
+  30-day "remember this device". Moving between tabs never re-prompts; the lock
+  icon beside the wordmark re-locks and forgets the device. Only a salted
+  SHA-256 digest ships in the bundle, never the passphrase. This is a doorstop,
+  not a lock: the data it guards is readable from devtools by anyone who opens
+  them, and the remembered flag is equally forgeable. It stops a passer-by.
 
 Data is stored under the `pt:todos`, `pt:habits`, `pt:habitEntries`,
 `pt:categories`, `pt:weightEntries`, and `pt:weightSettings` localStorage keys.

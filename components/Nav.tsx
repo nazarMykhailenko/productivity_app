@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLock } from "@/lib/auth";
 import { useStore } from "@/lib/store";
 import { dayKey } from "@/lib/stats";
 
@@ -10,6 +11,7 @@ const DUE = "#c98500";
 
 export default function Nav() {
   const pathname = usePathname();
+  const { lock } = useLock();
   const { categories, weightEntries, ready } = useStore();
 
   // Gated on `ready` so the dot renders only after hydration — the server has
@@ -45,6 +47,22 @@ export default function Nav() {
             M
           </span>
           <span className="text-sm font-medium tracking-tight text-ink">Momentum</span>
+          <button
+            onClick={lock}
+            aria-label="Lock and forget this device"
+            title="Lock and forget this device"
+            className="ml-auto rounded p-1.5 text-ink-3 transition-colors hover:bg-raised hover:text-ink"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <path
+                d="M4 7V5a4 4 0 118 0v2M3.5 7h9v6.5h-9z"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
         </div>
         <nav
           className="-mx-4 flex gap-1 overflow-x-auto px-4 pt-3 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
