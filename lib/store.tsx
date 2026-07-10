@@ -16,8 +16,19 @@ import {
   sanitizeRunSettings,
   sanitizeRuns,
 } from "./running";
+import {
+  DEFAULT_DIET_SETTINGS,
+  isEmptyDietEntry,
+  sanitizeDietEntries,
+  sanitizeDietEntry,
+  sanitizeDietSettings,
+} from "./diet";
 import type {
   Category,
+  DietEntries,
+  DietEntry,
+  DietSettings,
+  DietTargets,
   Habit,
   HabitEntries,
   HabitKind,
@@ -42,6 +53,8 @@ interface Store {
   weightSettings: WeightSettings;
   runs: Run[];
   runSettings: RunSettings;
+  dietEntries: DietEntries;
+  dietSettings: DietSettings;
   categories: Category[];
   /** Lookup by id; use getCategory() for a safe fallback. */
   categoryMap: Record<string, Category>;
@@ -86,6 +99,16 @@ interface Store {
   /** Display unit only — runs stay in metres. */
   setRunUnit: (unit: RunUnit) => void;
 
+  /**
+   * Merge a partial food check-in into a day; null fields clear that macro,
+   * and a day with nothing left is removed entirely.
+   */
+  setDietEntry: (day: string, patch: Partial<DietEntry>) => void;
+  /** Remove a day's food check-in. */
+  clearDietDay: (day: string) => void;
+  /** Update one or more daily macro targets. */
+  setDietTargets: (patch: Partial<DietTargets>) => void;
+
   addCategory: (label: string, color: string) => void;
   editCategory: (id: string, patch: Partial<Pick<Category, "label" | "color">>) => void;
   /** Removes the category; its todos and habits move to the first remaining one. */
@@ -111,6 +134,9 @@ interface Backup {
   // Added in version 6; absent from v1–v5 backups.
   runs?: Run[];
   runSettings?: RunSettings;
+  // Added in version 7; absent from v1–v6 backups.
+  dietEntries?: DietEntries;
+  dietSettings?: DietSettings;
   // Present in v1/v2 backups (goals feature, since removed); ignored on import.
   goals?: unknown;
 }
@@ -140,7 +166,14 @@ function isValidBackup(v: unknown): v is Backup {
       (typeof b.weightSettings === "object" && b.weightSettings !== null)) &&
     (b.runs === undefined || Array.isArray(b.runs)) &&
     (b.runSettings === undefined ||
-      (typeof b.runSettings === "object" && b.runSettings !== null))
+      (typeof b.runSettings === "object" && b.runSettings !== null)) &&
+    // Shape only; sanitizeDiet* drops individual bad days and settings.
+    (b.dietEntries === undefined ||
+      (typeof b.dietEntries === "object" &&
+        b.dietEntries !== null &&
+        !Array.isArray(b.dietEntries))) &&
+    (b.dietSettings === undefined ||
+      (typeof b.dietSettings === "object" && b.dietSettings !== null))
   );
 }
 
@@ -168,6 +201,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     "pt:runSettings",
     DEFAULT_RUN_SETTINGS
   );
+  const [dietEntries, setDietEntries, dietReady] = useLocalStorage<DietEntries>(
+    "pt:dietEntries",
+    {}
+  );
+  const [dietSettings, setDietSettings, dietSettingsReady] =
+    useLocalStorage<DietSettings>("pt:dietSettings", DEFAULT_DIET_SETTINGS);
 
   // Tasks saved before deadlines existed carry no `due` key at all; normalize on
   // read so nothing downstream has to cope with undefined.
@@ -183,6 +222,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       weightSettings,
       runs,
       runSettings,
+      dietEntries,
+      dietSettings,
       categories,
       categoryMap,
       getCategory: (id) => categoryMap[id] ?? FALLBACK_CATEGORY,
@@ -194,7 +235,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         weightReady &&
         weightSettingsReady &&
         runsReady &&
-        runSettingsReady,
+        runSettingsReady &&
+        dietReady &&
+        dietSettingsReady,
 
       addTodo(title, category, due = null) {
         const t = title.trim();
@@ -346,6 +389,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setRunSettings((prev) => ({ ...prev, unit }));
       },
 
+      setDietEntry(day, patch) {
+        if (!isValidDay(day)) return;
+        setDietEntries((prev) => {
+          // sanitize drops out-of-range values from the patch rather than
+          // storing something the stats would have to defend against.
+          const next = sanitizeDietEntry({ ...(prev[day] ?? {}), ...patch });
+          if (isEmptyDietEntry(next)) {
+            const { [day]: _removed, ...rest } = prev;
+            return rest;
+          }
+          return { ...prev, [day]: next };
+        });
+      },
+
+      clearDietDay(day) {
+        setDietEntries((prev) => {
+          const { [day]: _removed, ...rest } = prev;
+          return rest;
+        });
+      },
+
+      setDietTargets(patch) {
+        setDietSettings((prev) =>
+          sanitizeDietSettings({ targets: { ...prev.targets, ...patch } })
+        );
+      },
+
       addCategory(label, color) {
         const l = label.trim();
         if (!l) return;
@@ -382,7 +452,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       exportData() {
         return JSON.stringify(
           {
-            version: 6,
+            version: 7,
             exportedAt: new Date().toISOString(),
             todos,
             categories,
@@ -392,6 +462,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             weightSettings,
             runs,
             runSettings,
+            dietEntries,
+            dietSettings,
           },
           null,
           2
@@ -415,6 +487,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setWeightSettings(sanitizeWeightSettings(parsed.weightSettings));
         setRuns(sanitizeRuns(parsed.runs));
         setRunSettings(sanitizeRunSettings(parsed.runSettings));
+        setDietEntries(sanitizeDietEntries(parsed.dietEntries));
+        setDietSettings(sanitizeDietSettings(parsed.dietSettings));
         return true;
       },
     };
@@ -426,6 +500,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     weightSettings,
     runs,
     runSettings,
+    dietEntries,
+    dietSettings,
     categories,
     todosReady,
     habitsReady,
@@ -435,6 +511,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     weightSettingsReady,
     runsReady,
     runSettingsReady,
+    dietReady,
+    dietSettingsReady,
     setTodos,
     setHabits,
     setHabitEntries,
@@ -442,6 +520,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setWeightSettings,
     setRuns,
     setRunSettings,
+    setDietEntries,
+    setDietSettings,
     setCategories,
   ]);
 

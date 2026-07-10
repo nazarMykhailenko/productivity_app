@@ -20,6 +20,7 @@ import { GRID, INK2, MUTED, SERIES_1, SURFACE, axisTick } from "@/lib/chart";
 import { ChartEmpty, StatTile } from "@/components/StatPrimitives";
 import RunStats from "@/components/RunStats";
 import WeightStats from "@/components/WeightStats";
+import DietStats from "@/components/DietStats";
 import {
   daysLate,
   dueTodayTodos,
@@ -280,6 +281,7 @@ export default function StatsView() {
 
       <RunStats />
       <WeightStats />
+      <DietStats />
     </div>
   );
 }

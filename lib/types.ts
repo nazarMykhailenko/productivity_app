@@ -42,6 +42,31 @@ export interface WeightSettings {
   goal: number | null; // kilograms
 }
 
+export type MacroKey = "kcal" | "protein" | "carbs" | "fat";
+
+/**
+ * One day's food check-in. Fields are running totals for the day (kcal and
+ * grams); null means "not logged", which is different from an explicit 0 on a
+ * fasting day. `quality` is a 1–5 rating of how clean the day's food was.
+ */
+export interface DietEntry {
+  kcal: number | null;
+  protein: number | null;
+  carbs: number | null;
+  fat: number | null;
+  quality: number | null;
+}
+
+/** YYYY-MM-DD -> that day's totals. Stored days always have >= 1 field set. */
+export type DietEntries = Record<string, DietEntry>;
+
+/** Daily targets: kcal for "kcal", grams for the rest. */
+export type DietTargets = Record<MacroKey, number>;
+
+export interface DietSettings {
+  targets: DietTargets;
+}
+
 export type RunUnit = "km" | "mi";
 
 /**

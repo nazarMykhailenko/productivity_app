@@ -12,11 +12,12 @@ const DUE = "#c98500";
 export default function Nav() {
   const pathname = usePathname();
   const { lock } = useLock();
-  const { categories, weightEntries, ready } = useStore();
+  const { categories, weightEntries, dietEntries, ready } = useStore();
 
-  // Gated on `ready` so the dot renders only after hydration — the server has
+  // Gated on `ready` so the dots render only after hydration — the server has
   // no idea what "today" is in the reader's timezone.
   const weighInDue = ready && !(dayKey(new Date()) in weightEntries);
+  const dietDue = ready && !(dayKey(new Date()) in dietEntries);
 
   const tabs = [
     { href: "/", label: "All" as string, accent: undefined as string | undefined },
@@ -28,11 +29,12 @@ export default function Nav() {
   ];
 
   const rightTabs = [
-    { href: "/habits", label: "Habits", due: false },
-    { href: "/runs", label: "Runs", due: false },
-    { href: "/weight", label: "Weight", due: weighInDue },
-    { href: "/stats", label: "Stats", due: false },
-    { href: "/categories", label: "Edit", due: false },
+    { href: "/habits", label: "Habits", due: false, dueHint: undefined as string | undefined },
+    { href: "/runs", label: "Runs", due: false, dueHint: undefined },
+    { href: "/weight", label: "Weight", due: weighInDue, dueHint: "Today's weigh-in is missing" },
+    { href: "/diet", label: "Diet", due: dietDue, dueHint: "Today's food check-in is missing" },
+    { href: "/stats", label: "Stats", due: false, dueHint: undefined },
+    { href: "/categories", label: "Edit", due: false, dueHint: undefined },
   ];
 
   const linkClass = (active: boolean) =>
@@ -106,7 +108,7 @@ export default function Nav() {
                   key={tab.href}
                   href={tab.href}
                   aria-current={active ? "page" : undefined}
-                  title={tab.due ? "Today's weigh-in is missing" : undefined}
+                  title={tab.due ? tab.dueHint : undefined}
                   className={linkClass(active)}
                 >
                   <span className="flex items-center gap-1.5">
